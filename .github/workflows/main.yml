@@ -1,4 +1,4 @@
-name: Build DroidCam Alternative APK
+name: Build Android APK (Debug & Release)
 
 on:
   push:
@@ -6,11 +6,11 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  build-apk:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repository
+      - name: Checkout Source Code
         uses: actions/checkout@v4
 
       - name: Set up JDK 17
@@ -19,25 +19,34 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Accept Android SDK Licenses
+        run: yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
-      - name: Setup Gradle 8.7
-        uses: gradle/actions/setup-gradle@v3
+      - name: Setup Gradle 8.9
+        uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '8.7'
+          gradle-version: '8.9'
 
       - name: Build Debug & Release APKs
-        run: gradle assembleDebug assembleRelease --stacktrace
+        run: |
+          if [ -f "settings.gradle.kts" ]; then
+            gradle assembleDebug assembleRelease
+          elif [ -f "DroidCamAlternative/settings.gradle.kts" ]; then
+            cd DroidCamAlternative && gradle assembleDebug assembleRelease
+          else
+            echo "Struktur folder proyek Android tidak ditemukan:"
+            find . -maxdepth 3
+            exit 1
+          fi
 
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
           name: DroidCamAlternative-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
+          path: "**/app/build/outputs/apk/debug/app-debug.apk"
 
       - name: Upload Release APK
         uses: actions/upload-artifact@v4
         with:
           name: DroidCamAlternative-release-apk
-          path: app/build/outputs/apk/release/*.apk
+          path: "**/app/build/outputs/apk/release/app-release.apk"
